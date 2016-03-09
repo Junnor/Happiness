@@ -8,14 +8,34 @@
 
 import UIKit
 
-class FaceView: UIView {
+
+protocol FaceViewDataSource: class {
+    func smilinessForFaceView(sender: FaceView) -> Double?
+}
+
+
+@IBDesignable class FaceView: UIView {
     
-    var lineWidth: CGFloat = 3 { didSet { setNeedsDisplay() } }
-    var color: UIColor = UIColor.redColor() { didSet { setNeedsDisplay() } }
-    var scale: CGFloat = 0.9 { didSet { setNeedsDisplay() } }
+    weak var dataSource: FaceViewDataSource?
+    
+    @IBInspectable var lineWidth: CGFloat = 3 { didSet { setNeedsDisplay() } }
+    @IBInspectable var color: UIColor = UIColor.redColor() { didSet { setNeedsDisplay() } }
+    @IBInspectable var scale: CGFloat = 0.9 { didSet { setNeedsDisplay() } }
     
     var faceCenter: CGPoint { return convertPoint(center, fromView: superview) }
     var faceRadius: CGFloat { return min(bounds.size.width, bounds.size.height) / 2 * scale }
+    
+    override func awakeFromNib() {
+        let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: "changeScale:")
+        addGestureRecognizer(pinchRecognizer)
+    }
+    
+    func changeScale(gesture: UIPinchGestureRecognizer) {
+        if gesture.state == .Changed {
+            scale *= gesture.scale
+            gesture.scale = 1
+        }
+    }
     
     private struct Scaling{
         static let FaceRadiusToEyeRadiusRatio: CGFloat = 10
@@ -74,7 +94,9 @@ class FaceView: UIView {
         
         bezierPathForEye(.Left).stroke()
         bezierPathForEye(.Right).stroke()
-        bezierPathForSmile(0.65).stroke()
+        
+        let smiliness = dataSource?.smilinessForFaceView(self) ?? 0.0
+        bezierPathForSmile(smiliness).stroke()
     }
 
 }
